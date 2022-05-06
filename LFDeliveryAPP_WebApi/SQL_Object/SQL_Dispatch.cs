@@ -1,4 +1,5 @@
 ﻿using Dapper;
+using LFDeliveryAPP_WebApi.Class;
 using LFDeliveryAPP_WebApi.Class.DTOs;
 using LFDeliveryAPP_WebApi.Model.Dispatch;
 using LFDeliveryAPP_WebApi.Model.SQL_Ex;
@@ -19,21 +20,62 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
 
         public void Dispose() => GC.Collect();
         string _MWdbConnectionStr;
-        string _SAPdbConnectionStr;
+        string _currentDB;
         IConfiguration _configuration;
-        public SQL_Dispatch(IConfiguration configuration, string MWdbConnectionStr, string SAPdbConnectionStr)
+        public SQL_Dispatch(IConfiguration configuration, string MWdbConnectionStr, string currentDB)
         {
-            _SAPdbConnectionStr = SAPdbConnectionStr;
+            _currentDB = currentDB;
             _MWdbConnectionStr = MWdbConnectionStr;
             _configuration = configuration;
         }
 
-        //public string CheckAttachment()
+        //public Cio GetWholeDocDetails(List<string> )
         //{
 
-        //    return null;
         //}
+        public List<INV1_Ex> GetInvoiceDetailLine(string docEntries)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_MWdbConnectionStr))
+                {
+                    string query = "SELECT * FROM [" + _currentDB + "].[dbo].[INV1] WHERE DocEntry = @docentry";
 
+                    return conn.Query<INV1_Ex>(query, new { docentry = docEntries }).ToList();
+                }
+            }
+            catch (Exception excep)
+            {
+                LastErrorMessage = excep.ToString();
+                return null;
+            }
+        }
+
+        public List<string> GetAllDeliveredInvoice(string driverCode, DateTime startTime, DateTime endTime, string docEntry)
+        {
+            try
+            {
+                conn = new SqlConnection(_MWdbConnectionStr);
+                string query = $"SELECT T0.InvoiceDocEntry FROM DispatchDetail T0 " +
+                               $"INNER JOIN DispatchHeader T1 ON T0.Guid = T1.Guid "+
+                               $"WHERE T1.DriverCode = @Driver AND T0.Status = 'Delivered' AND T0.CompanyID = @CompanyID "+
+                               $"AND CAST(T0.DeliveredTime as date) >= CAST(@StartTime as date) AND CAST(T0.DeliveredTime as date) <= CAST(@EndTime as date)";
+                if (!string.IsNullOrEmpty(docEntry))
+                {
+                    query = $"SELECT T0.InvoiceDocEntry FROM DispatchDetail T0 " +
+                                   $"INNER JOIN DispatchHeader T1 ON T0.Guid = T1.Guid " +
+                                   $"WHERE T1.DriverCode = @Driver AND T0.Status = 'Delivered' AND T0.CompanyID = @CompanyID AND T0.DocEntry = @DocEntry ";
+                }
+
+                var result = conn.Query<string>(query,new { Driver = driverCode, CompanyID = _currentDB, StartTime = startTime, EndTime = endTime, DocEntry = docEntry}).ToList();
+                return result;
+            }
+            catch (Exception excep)
+            {
+                LastErrorMessage = excep.ToString();
+                return null;
+            }
+        }
         public int InsertAttachmentTable(DTODispatch dTODispatch)
         {
             try
@@ -87,10 +129,10 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
 
                 var dictintLineGuid = dTODispatch.DispatchDetails.Where(x=>x.Status== "InTransit").Select(x => x.LineGuid).Distinct().ToList();
                 string updateLineQuery = @"UPDATE DispatchDetail SET Status = @Status, DeliveredTime = GETDATE()
-                                       WHERE Guid = @Guid AND LineGuid = @LineGuid;";
+                                       WHERE Guid = @Guid AND LineGuid = @LineGuid AND CompanyID = @CompanyID";
                 foreach(var lineguid in dictintLineGuid)
                 {
-                    result = conn.Execute(updateLineQuery, new { Status = dTODispatch.QueryStatus, Guid = dTODispatch.DispatchHeader.Guid, LineGuid = lineguid }, trans);
+                    result = conn.Execute(updateLineQuery, new { Status = dTODispatch.QueryStatus, Guid = dTODispatch.DispatchHeader.Guid, LineGuid = lineguid, CompanyID = _currentDB}, trans);
                 }
                 trans.Commit();
 
@@ -103,6 +145,7 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
                 return -1;
             }
         }
+
         public int CheckToUpdatedHeader(DTODispatch dTODispatch)
         {
             try
@@ -111,22 +154,22 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
                 int result = -1;
                 var conn = new SqlConnection(_MWdbConnectionStr);
 
-                string selectquery = "SELECT * FROM DispatchDetail WHERE Guid = @guid";
+                string selectquery = "SELECT * FROM DispatchDetail WHERE Guid = @guid AND CompanyID = @CompanyID";
 
-                var detailList = conn.Query<DispatchDetail>(selectquery, new { guid = dTODispatch.DispatchHeader.Guid }).ToList();
+                var detailList = conn.Query<DispatchDetail>(selectquery, new { guid = dTODispatch.DispatchHeader.Guid, CompanyID = _currentDB }).ToList();
 
                 var statusfilter = detailList.Where(x => x.Status == "Delivered").ToList();
 
                 updateHeaderQuery = @"UPDATE DispatchHeader SET LastUpdatedDate = GETDATE()
-                                          WHERE Guid = @guid";
+                                          WHERE Guid = @guid AND CompanyID = @CompanyID";
 
                 if (statusfilter.Count == detailList.Count)
                 {
                     updateHeaderQuery = @"UPDATE DispatchHeader SET DocStatus = 'Delivered', LastUpdatedDate = GETDATE()
-                                          WHERE Guid = @guid";
+                                          WHERE Guid = @guid AND CompanyID = @CompanyID";
                 }
 
-                result = conn.Execute(updateHeaderQuery, new { Guid = dTODispatch.DispatchHeader.Guid });
+                result = conn.Execute(updateHeaderQuery, new { Guid = dTODispatch.DispatchHeader.Guid, CompanyID = _currentDB});
                 return result;
             }
             catch (Exception excep)
@@ -140,11 +183,12 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
             try
             {
                 List<OINV_Ex> oINVs = new List<OINV_Ex>();
-                using (var conn = new SqlConnection(_SAPdbConnectionStr))
+                using (var conn = new SqlConnection(_MWdbConnectionStr))
                 {
-                    string query = @"SELECT T0.*, T1.Name[ContactPerson], T1.Tel1[ContactNo] FROM OINV T0
-                                     INNER JOIN OCPR T1 ON T0.CntctCode = T1.CntctCode
-                                     WHERE DocEntry = @DocEntry";
+                    string query = "SELECT T0.*, T1.Name[ContactPerson], T1.Tel1[ContactNo], T2.DeliveredTime [DeliveredDate] FROM [" + _currentDB +"]..[OINV] T0"+
+                                   " LEFT JOIN [" + _currentDB + "]..[OCPR] T1 ON T0.CntctCode = T1.CntctCode" +
+                                   " INNER JOIN DispatchDetail T2 ON T0.DocEntry = T2.InvoiceDocEntry" +
+                                   " WHERE T0.DocEntry = @DocEntry";
 
                     foreach (var docentry in docEntries)
                     {
@@ -165,9 +209,9 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
             try
             {
                 List<INV1_Ex> iNV1s = new List<INV1_Ex>();
-                using (var conn = new SqlConnection(_SAPdbConnectionStr))
+                using (var conn = new SqlConnection(_MWdbConnectionStr))
                 {
-                    string query = "SELECT * FROM INV1 WHERE DocEntry = @docentry";
+                    string query = "SELECT * FROM [" + _currentDB + "].[dbo].[INV1] WHERE DocEntry = @docentry";
 
                     foreach (var docentry in docEntries)
                     {
@@ -192,19 +236,19 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
                 conn = new SqlConnection(_MWdbConnectionStr);
 
                 #region CheckExistingDraft
-                string query = "SELECT * FROM DispatchDetailDraft WHERE DriverCode = @driver";
-                var result = conn.Query<DispatchDetail>(query, new { driver = driver }).ToList();
+                string query = "SELECT * FROM DispatchDetailDraft WHERE DriverCode = @driver AND CompanyID = @CompanyID";
+                var result = conn.Query<DispatchDetail>(query, new { driver = driver, CompanyID = _currentDB }).ToList();
                 if (result == null || result.Count == 0) return null;
 
                 invoiceList = result.Select(x=>x.InvoiceDocEntry).Distinct().ToList();
                 #endregion
 
-                using (var sapconn = new SqlConnection(_SAPdbConnectionStr))
+                using (var sapconn = new SqlConnection(_MWdbConnectionStr))
                 {
                     #region GetInvoiceList
-                    string headerquery = @"SELECT T0.*, T1.Name [ContactPerson], T1.Tel1 [ContactNo] FROM OINV T0
-                                         INNER JOIN OCPR T1 ON T0.CntctCode = T1.CntctCode
-                                         WHERE DocEntry = @QueryDocEntry";
+                    string headerquery = "SELECT T0.*, T1.Name [ContactPerson], T1.Tel1 [ContactNo] FROM [" + _currentDB + "].[dbo].[OINV] T0"+
+                                         " LEFT JOIN [" + _currentDB + "].[dbo].[OCPR] T1 ON T0.CntctCode = T1.CntctCode" +
+                                         " WHERE DocEntry = @QueryDocEntry";
 
                     foreach(var line in invoiceList)
                     {
@@ -235,13 +279,13 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
                 conn = new SqlConnection(_MWdbConnectionStr);
                 if (docEntry == "-1" || docEntry == null)
                 {
-                    string deletequery = "Delete FROM DispatchDetailDraft WHERE DriverCode = @driver";
-                    result = conn.Execute(deletequery, new { driver = driver });
+                    string deletequery = "Delete FROM DispatchDetailDraft WHERE DriverCode = @driver AND CompanyID = @CompanyID";
+                    result = conn.Execute(deletequery, new { driver = driver, CompanyID =_currentDB });
                 }
                 else 
                 {
-                    string deletequery = "Delete FROM DispatchDetailDraft WHERE DriverCode = @driver AND PickNo = @PickNo";
-                    result = conn.Execute(deletequery, new { driver = driver, PickNo = docEntry });
+                    string deletequery = "Delete FROM DispatchDetailDraft WHERE DriverCode = @driver AND InvoiceDocEntry = @InvoiceDocEntry  AND CompanyID = @CompanyID";
+                    result = conn.Execute(deletequery, new { driver = driver, InvoiceDocEntry = docEntry, CompanyID = _currentDB });
                 }
 
                 return result;
@@ -262,8 +306,8 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
                 string sql = "SELECT COUNT(*) FROM DispatchHeader";
                 count = conn.ExecuteScalar<int>(sql);
 
-                string draftsql = "SELECT * FROM DispatchDetailDraft WHERE DriverCode = @driver";
-                var draft = conn.Query<DispatchDetail>(draftsql, new { driver = dTODelivery.DispatchHeader.DriverCode }).ToList();
+                string draftsql = "SELECT * FROM DispatchDetailDraft WHERE DriverCode = @driver AND CompanyID = @CompanyID ";
+                var draft = conn.Query<DispatchDetail>(draftsql, new { driver = dTODelivery.DispatchHeader.DriverCode, CompanyID = _currentDB }).ToList();
 
                 if (draft != null)
                 {
@@ -281,6 +325,7 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
                 string headerQuery = @"INSERT INTO DispatchHeader
                                                      ( [DocEntry]
                                                     ,[Guid]
+                                                    ,[CompanyID]
                                                     ,[DriverCode]
                                                     ,[DriverName]
                                                     ,[CreatedDate]
@@ -288,7 +333,8 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
                                                     ,[DocStatus] 
                                                    ) VALUES (
                                                      @DocEntry,
-                                                     @Guid, 
+                                                     @Guid,
+                                                     @CompanyID,
                                                      @DriverCode,
                                                      @DriverName, 
                                                      GETDATE(), 
@@ -303,6 +349,7 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
                 string detailsQuery = @"INSERT INTO DispatchDetail
                                                      ( [DocEntry]
                                                      ,[Guid]
+                                                     ,[CompanyID]
                                                      ,[LineGuid]
                                                      ,[PickNo]
                                                      ,[InvoiceDocEntry]
@@ -315,6 +362,7 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
                                                      ) VALUES (
                                                       @DocEntry,
                                                       @Guid, 
+                                                      @CompanyID,
                                                       @LineGuid,
                                                       @PickNo,
                                                       @InvoiceDocEntry, 
@@ -345,19 +393,23 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
                 int result = -1;
                 conn = new SqlConnection(_MWdbConnectionStr);
                 string insertquery = @"INSERT INTO [DispatchDetailDraft] (
-                                       [DriverCode]
+                                       [CompanyID]
+                                      ,[DriverCode]
                                       ,[PickNo]
                                       ,[InvoiceDocEntry]
                                       ,[CardCode]
                                       ,[CardName]
+                                      ,[Status]
                                       ,[LoadTime]
                                       ,[CreatedDate]
                                         ) VALUES (
+                                        @CompanyID,
                                         @Driver, 
                                         @PickNo,
                                         @InvoiceDocEntry,
                                         @CardCode,
                                         @CardName,
+                                        'Loaded',
                                         GetDate(),
                                         GetDate()
                                         )";
@@ -366,12 +418,13 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
                 {
                     result = conn.Execute(insertquery, new
                     {
+                        CompanyID =_currentDB,
                         Driver = driver,
                         PickNo = line.PickIdNo,
                         InvoiceDocEntry = line.DocEntry,
                         CardCode = line.CardCode,
                         CardName = line.CardName,
-                    });
+                    });;
                 }
 
                 return result;
@@ -386,16 +439,16 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
         {
             try
             {
-                using (var sapconn = new SqlConnection(_SAPdbConnectionStr))
+                using (var sapconn = new SqlConnection(_MWdbConnectionStr))
                 {
                     List<OINV_Ex> oINVs = new List<OINV_Ex>();
                     #region GetOINVDocEntry From PickList
-                    string headerquery = @"SELECT DISTINCT T1.DocEntry
-                                           FROM INV1 T0 
-                                           INNER JOIN OINV T1 On T1.DocEntry = T0.DocEntry
-                                           INNER JOIN PKL1 T2 on T0.PickIdNo = T2.AbsEntry 
-                                           INNER JOIN OPKL T3 on T2.AbsEntry = T3.AbsEntry 
-                                           WHERE T0.PickIdNo = @QueryDocEntry AND T3.U_Driver = @Driver";
+                    string headerquery = "SELECT DISTINCT T1.DocEntry " +
+                                         " FROM [" + _currentDB + "].[dbo].[INV1] T0"+
+                                         " INNER JOIN [" + _currentDB + "].[dbo].OINV T1 On T1.DocEntry = T0.DocEntry" +
+                                         " INNER JOIN [" + _currentDB + "].[dbo].PKL1 T2 on T0.PickIdNo = T2.AbsEntry " +
+                                         " INNER JOIN [" + _currentDB + "].[dbo].OPKL T3 on T2.AbsEntry = T3.AbsEntry " +
+                                         " WHERE T0.PickIdNo = @QueryDocEntry AND T3.U_Driver = @Driver";
 
                     var OINVDocEntryList = sapconn.Query<string>(headerquery, new { QueryDocEntry = docEntry, Driver = driver }).ToList();
                     if (OINVDocEntryList == null || OINVDocEntryList.Count <= 0)
@@ -405,9 +458,9 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
                     #endregion
 
                     #region GetOINV
-                    string oINVquery = @"SELECT T0.*, T1.Name [ContactPerson], T1.Tel1 [ContactNo] FROM OINV T0
-                                         INNER JOIN OCPR T1 ON T0.CntctCode = T1.CntctCode
-                                         WHERE DocEntry = @DocEntry";
+                    string oINVquery = "SELECT T0.*, T1.Name [ContactPerson], T1.Tel1 [ContactNo] FROM [" + _currentDB + "].[dbo].[OINV] T0" +
+                                       " LEFT JOIN [" + _currentDB + "].[dbo].[OCPR] T1 ON T0.CntctCode = T1.CntctCode" +
+                                       " WHERE DocEntry = @DocEntry";
                     //OINV List 
                     foreach (var docnoOINV in OINVDocEntryList)
                     {
@@ -423,6 +476,25 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
             {
                 LastErrorMessage = excep.ToString();
                 return null;
+            }
+        }
+        public bool CheckPickListDuplicate(string docentry)
+        {
+            try
+            {
+                var conn = new SqlConnection(_MWdbConnectionStr);
+                string query = " SELECT COUNT(PickNo) FROM DispatchDetail WHERE PickNo = @PickNo AND CompanyID = @CompanyID";
+
+                var result = conn.Query<int>(query, new { PickNo = docentry, CompanyID = _currentDB }).FirstOrDefault();
+                if (result > 0)
+                    return false;
+                return true;
+
+            }
+            catch (Exception excep)
+            {
+                LastErrorMessage = excep.ToString();
+                return false;
             }
         }
     }

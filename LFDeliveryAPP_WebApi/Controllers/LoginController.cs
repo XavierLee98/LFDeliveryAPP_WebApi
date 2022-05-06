@@ -1,0 +1,118 @@
+﻿using Dapper;
+using LFDeliveryAPP_WebApi.Class;
+using LFDeliveryAPP_WebApi.Class.SAP;
+using LFDeliveryAPP_WebApi.SQL_Object.Login;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.Data.SqlClient;
+using System.Linq;
+using System.Threading.Tasks;
+
+namespace LFDeliveryAPP_WebApi.Controllers
+{
+    [ApiController]
+    [Route("[controller]")]
+    public class LoginController : ControllerBase
+    {
+        readonly string _dbMidwareName = "DatabaseDeliveryAppMw";
+        string _dbMWConnectionStr;
+        readonly IConfiguration _configuration;
+        ILogger _logger;
+        FileLogger _fileLogger = new FileLogger();
+        string _lastErrorMessage = string.Empty;
+        public LoginController(IConfiguration configuration, ILogger<PaymentController> logger)
+        {
+            _logger = logger;
+            _configuration = configuration;
+            _dbMWConnectionStr = _configuration.GetConnectionString(_dbMidwareName);
+        }
+
+        /// <summary>
+        /// Controller entry point
+        /// </summary>
+        /// <param name="cio"></param>
+        /// <returns></returns>
+        [HttpPost]
+        public IActionResult ActionPost(Cio bag)
+        {
+            try
+            {
+                switch (bag.request)
+                {
+                    case "Login":
+                        {
+                            return ProcessLogin(bag);
+                        }
+
+                }
+                return BadRequest($"Invalid request, please try again later. Thanks");
+            }
+            catch (Exception excep)
+            {
+                Log($"{excep}", bag);
+                return BadRequest($"{excep}");
+            }
+        }
+
+        IActionResult ProcessLogin(Cio cio)
+        {
+            try
+            {
+                var appName = _configuration.GetSection("AppSettings").GetSection("AppName").Value;
+                var secKey = _configuration.GetSection("AppSettings").GetSection("Secret").Value;
+                var user = new mwUser(_dbMWConnectionStr);
+
+                bool isVerify = user.VerifyUser(cio.username, cio.password, secKey);
+                if (!isVerify)
+                {
+                    Log($"User login fail \n{user.lastErrMsg}", cio);
+                    return BadRequest($"User login fail \n{user.lastErrMsg}");
+                }
+                if(getcurrentDB(user.user.CompanyId) == null)
+                {
+                    return BadRequest($"Fail to get DBCommon.");
+                }
+                cio.currentDB = (getcurrentDB(user.user.CompanyId));
+                cio.CurrentUser = user.user;
+                cio.CurrentUser.assigned_token = user.GetEncrytedGUID(secKey);
+                cio.CurrentUser.Password = user.GetEncrytedPw(secKey);
+                //cio.CurrentUser.UserName = user.user.UserName;
+                //cio.CurrentUser.DisplayName = user.user.UserName;
+                //cio.CurrentUser.RoleDesc = user.user.RoleDesc;
+                //cio. = user.user.RoleDesc;
+
+                return Ok(cio);
+            }
+            catch (Exception excep)
+            {
+                Log($"{excep}", cio);
+                return BadRequest($"{excep}");
+            }
+        }
+
+        public DBCommon getcurrentDB(string companyID)
+        {
+            try
+            {
+                var conn = new SqlConnection(_dbMWConnectionStr);
+                string query = "SELECT * FROM DBCommon WHERE CompanyID = @companyID";
+                return conn.Query<DBCommon>(query, new { companyID = companyID }).FirstOrDefault();
+            }
+            catch (Exception excep)
+            {
+                Log($"{excep}", null);
+                return null;
+            }
+        }
+
+        void Log(string message, Cio bag)
+        {
+            _logger?.LogError(message, bag);
+            _fileLogger.WriteLog(message);
+        }
+    }
+}

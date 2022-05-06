@@ -1,0 +1,77 @@
+﻿using Dapper;
+using DbClass;
+using LFDeliveryAPP_WebApi.Class;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.Data.SqlClient;
+using System.Linq;
+using System.Threading.Tasks;
+
+namespace LFDeliveryAPP_WebApi.Controllers
+{
+    [ApiController]
+    [Route("[controller]")]
+    public class SharedController : ControllerBase
+    {
+        string _lastErrorMessage { get; set; } = string.Empty;
+        string _dbMWConnectionStr = string.Empty;
+        string _dbSAPConnectionStr = string.Empty;
+        string _dbMWName = "DatabaseDeliveryAppMw";
+        string _dbSAPName = "DatabaseSAP";
+        readonly IConfiguration _configuration;
+        ILogger _logger;
+        FileLogger _fileLogger = new FileLogger();
+        public SharedController(IConfiguration configuration, ILogger<PaymentController> logger)
+        {
+            _logger = logger;
+            _configuration = configuration;
+            _dbMWConnectionStr = _configuration.GetConnectionString(_dbMWName);
+            _dbSAPConnectionStr = _configuration.GetConnectionString(_dbSAPName);
+        }
+
+        [HttpPost]
+        public IActionResult Post(Cio bag)
+        {
+            try
+            {
+                switch (bag.request)
+                {
+                    case "LoadCustomer":
+                        {
+                            return GetCustomerList(bag);
+                        }
+                }
+                _lastErrorMessage = "Request is Empty.";
+                return null;
+            }
+            catch (Exception excep)
+            {
+                return BadRequest(excep.ToString());
+            }
+        }
+
+        public IActionResult GetCustomerList(Cio bag)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_dbSAPConnectionStr))
+                {
+                    string query = $"SELECT CardCode, CardName FROM {bag.currentDB.CompanyDB}..OCRD WHERE CardType = 'C'";
+                    var result = conn.Query<OCRD>(query).ToList();
+
+                    bag.BPResultList = result;
+
+                }
+                return Ok(bag);
+            }
+            catch (Exception excep)
+            {
+                _lastErrorMessage = excep.ToString();
+                return BadRequest(_lastErrorMessage);
+            }
+        }
+    }
+}

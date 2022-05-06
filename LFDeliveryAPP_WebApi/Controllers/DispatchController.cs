@@ -81,9 +81,69 @@ namespace LFDeliveryAPP_WebApi.Controllers
                         {
                             return UpdateDipatchWithAttachment(bag);
                         }
+                    case "GetDipatchHistoryList":
+                        {
+                            return GetHistoryList(bag);
+                        }
+                    case "GetInvoiceDetailLine":
+                        {
+                            return GetInvoiceDetailLine(bag);
+                        }
                 }
                 _lastErrorMessage = "Request is Empty.";
                 return null;
+            }
+            catch (Exception excep)
+            {
+                Log($"{excep}", bag);
+                return BadRequest($"{excep}");
+            }
+        }
+
+        IActionResult GetInvoiceDetailLine(Cio bag)
+        {
+            try
+            {
+                var dispatch = new SQL_Dispatch(_configuration, _dbMWConnectionStr, bag.currentDB.CompanyDB);
+                var detailLine = dispatch.GetInvoiceDetailLine(bag.QueryDocEntry);
+                if (detailLine == null )
+                {
+                    return BadRequest(dispatch.LastErrorMessage);
+                }
+                bag.INV1s = detailLine;
+                return Ok(bag);
+            }
+            catch (Exception excep)
+            { 
+                Log($"{excep}", bag);
+                return BadRequest($"{excep}");
+            }
+        }
+
+        IActionResult GetHistoryList(Cio bag)
+        {
+            try
+            {
+                var dispatch = new SQL_Dispatch(_configuration, _dbMWConnectionStr, bag.currentDB.CompanyDB);
+
+                var InvoiceDocList = dispatch.GetAllDeliveredInvoice(bag.QueryDriver, bag.QueryStartTime, bag.QueryEndTime, bag.QueryDocEntry);
+                if(InvoiceDocList == null)
+                {
+                    return BadRequest(dispatch.LastErrorMessage);
+                }
+                if(InvoiceDocList.Count <= 0)
+                {
+                    return Ok(bag);
+                }
+
+                var oinvs = dispatch.GetInvoiceHeaders(InvoiceDocList);
+                if (oinvs == null || oinvs.Count <= 0)
+                {
+                    return BadRequest(dispatch.LastErrorMessage);
+                }
+
+                bag.OINVs = oinvs;
+                return Ok(bag);
             }
             catch (Exception excep)
             {
@@ -96,7 +156,7 @@ namespace LFDeliveryAPP_WebApi.Controllers
         {
             try
             {
-                var dispatch = new SQL_Dispatch(_configuration, _dbMWConnectionStr, _dbSAPConnectionStr);
+                var dispatch = new SQL_Dispatch(_configuration, _dbMWConnectionStr, bag.currentDB.CompanyDB);
 
                 var filterList = bag.DTODispatch.DispatchDetails.Where(x => x.Status == "Delivered").ToList();
 
@@ -139,7 +199,7 @@ namespace LFDeliveryAPP_WebApi.Controllers
             {
                 using (var conn = new SqlConnection(_dbSAPConnectionStr))
                 {
-                    var dispatch = new SQL_Dispatch(_configuration, _dbMWConnectionStr, _dbSAPConnectionStr);
+                    var dispatch = new SQL_Dispatch(_configuration, _dbMWConnectionStr, bag.currentDB.CompanyDB);
 
                     var OINVs = dispatch.GetInvoiceHeaders(bag.QueryDocEntries);
                     if (OINVs == null)
@@ -169,9 +229,10 @@ namespace LFDeliveryAPP_WebApi.Controllers
         {
             try
             {
-                using (var conn = new SqlConnection(_dbSAPConnectionStr))
+                var _currentDB = bag.currentDB.CompanyDB;
+                using (var conn = new SqlConnection(_dbMWConnectionStr))
                 {
-                    string query = "SELECT * FROM INV1 WHERE DocEntry = @DocEntry";
+                    string query = "SELECT * FROM [" + _currentDB + "].[dbo].[INV1] WHERE DocEntry = @DocEntry";
 
                     var inv1s = conn.Query<INV1_Ex>(query, new { DocEntry = bag.QueryDocEntry }).ToList();
                     bag.INV1s = inv1s;
@@ -185,13 +246,19 @@ namespace LFDeliveryAPP_WebApi.Controllers
             }
         }
 
-
         IActionResult GetInvoicesFromPickList(Cio bag)
         {
             try
             {
-                var dispatch = new SQL_Dispatch(_configuration, _dbMWConnectionStr, _dbSAPConnectionStr);
+                var dispatch = new SQL_Dispatch(_configuration, _dbMWConnectionStr, bag.currentDB.CompanyDB);
 
+                var checkduplicate = dispatch.CheckPickListDuplicate(bag.QueryDocEntry);
+
+                if (!checkduplicate)
+                {
+                    _lastErrorMessage = "Pick List already exist in other dispatch. Please try other pick no.";
+                    return BadRequest(_lastErrorMessage);
+                }
 
                 bag.OINVs = dispatch.GetInvoiceFromOPKL(bag.QueryDocEntry, bag.QueryDriver);
                 if (bag.OINVs == null || bag.OINVs.Count <=0)
@@ -237,24 +304,11 @@ namespace LFDeliveryAPP_WebApi.Controllers
             }
         }
 
-        //IActionResult GetInvoiceDocDetail(Cio bag)
-        //{
-        //    try
-        //    {
-        //        return Ok();
-        //    }
-        //    catch (Exception excep)
-        //    {
-        //        Log($"{excep}", bag);
-        //        return BadRequest($"{excep}");
-        //    }
-        //}
-
         IActionResult CheckDriverExistingDraft(Cio bag)
         {
             try
             {
-                using var dispatch = new SQL_Dispatch(_configuration, _dbMWConnectionStr, _dbSAPConnectionStr);
+                using var dispatch = new SQL_Dispatch(_configuration, _dbMWConnectionStr, bag.currentDB.CompanyDB);
                 var result = dispatch.CheckExistingDraft(bag.QueryDriver);
 
                 bag.OINVs = result;
@@ -271,7 +325,7 @@ namespace LFDeliveryAPP_WebApi.Controllers
         {
             try
             {
-                using var dispatch = new SQL_Dispatch(_configuration, _dbMWConnectionStr, _dbSAPConnectionStr);
+                using var dispatch = new SQL_Dispatch(_configuration, _dbMWConnectionStr, bag.currentDB.CompanyDB);
                 var result = dispatch.RemoveDraft(bag.QueryDriver, bag.QueryDocEntry);
                 if (result < 0)
                 {
@@ -292,9 +346,9 @@ namespace LFDeliveryAPP_WebApi.Controllers
             {
                 using(var conn = new SqlConnection(_dbMWConnectionStr))
                 {
-                    string query = "Select * FROM DispatchHeader WHERE DriverCode = @QueryDriver";
+                    string query = "Select * FROM DispatchHeader WHERE DriverCode = @QueryDriver AND CompanyID = @CompanyID";
 
-                    var result = conn.Query<DispatchHeader>(query, new { QueryDriver = bag.QueryDriver }).ToList();
+                    var result = conn.Query<DispatchHeader>(query, new { QueryDriver = bag.QueryDriver, CompanyID = bag.currentDB.CompanyDB }).ToList();
 
                     var dto = new DTODispatch();
 
@@ -313,7 +367,7 @@ namespace LFDeliveryAPP_WebApi.Controllers
         {
             try
             {
-                var dispatch = new SQL_Dispatch(_configuration, _dbMWConnectionStr, _dbSAPConnectionStr);
+                var dispatch = new SQL_Dispatch(_configuration, _dbMWConnectionStr, bag.currentDB.CompanyDB);
 
                 var result = dispatch.CreateDispatchDoc(bag.DTODispatch);
 
@@ -338,12 +392,6 @@ namespace LFDeliveryAPP_WebApi.Controllers
                 return BadRequest(_lastErrorMessage);
             }
         }
-
-
-
-
-
-
 
         /// <summary>
         /// Logging error to log
