@@ -10,6 +10,7 @@ namespace LFDeliveryAPP_WebApi.Model.Dispatch
         public int Id { get; set; }
         public int DocEntry { get; set; }
         public Guid Guid { get; set; }
+        public string CompanyID { get; set; }
         public Guid LineGuid { get; set; }
         public int PickNo { get; set; }
         public int InvoiceDocEntry { get; set; }

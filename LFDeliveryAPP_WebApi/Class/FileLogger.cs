@@ -33,7 +33,7 @@ namespace LFDeliveryAPP_WebApi.Class
         {
             try
             {
-                string destinationPath = Path.Combine(Path.GetTempFileName(), @$"\ProdAppLog");
+                string destinationPath = Path.Combine(Path.GetTempFileName(), @$"\DeliveryAppLog");
                 if (!Directory.Exists(destinationPath))
                 {
                     Directory.CreateDirectory(destinationPath);

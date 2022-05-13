@@ -13,8 +13,6 @@ namespace LFDeliveryAPP_WebApi.Model.SQL_Ex
         public string PickIdNo { get; set; }
         public string ContactPerson { get; set; }
         public string ContactNo { get; set; }
-        public List<Attachment> attachments { get; set; } = new List<Attachment>();
-
-
+        public DateTime DeliveredDate { get; set; }
     }
 }

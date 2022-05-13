@@ -1,11 +1,14 @@
 ﻿using Dapper;
 using LFDeliveryAPP_WebApi.Class;
 using LFDeliveryAPP_WebApi.Model.Other;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Processing;
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
@@ -26,6 +29,8 @@ namespace LFDeliveryAPP_WebApi.Controllers
         string _dbSAPConnectionStr = string.Empty;
         string _dbMWName = "DatabaseDeliveryAppMw";
         string _dbSAPName = "DatabaseSAP";
+        int _height = 0;
+        int _weight = 0;
         FileLogger _fileLogger = new FileLogger();
 
         ILogger _logger;
@@ -37,6 +42,8 @@ namespace LFDeliveryAPP_WebApi.Controllers
             _dbMWConnectionStr = _configuration.GetConnectionString(_dbMWName);
             _dbSAPConnectionStr = _configuration.GetConnectionString(_dbSAPName);
             _attachmentPath = _configuration.GetSection(_attachment).Value;
+            _height = Convert.ToInt32(_configuration.GetSection("PictureHeight").Value);
+            _weight = Convert.ToInt32(_configuration.GetSection("PictureWidth").Value);
 
         }
 
@@ -59,10 +66,13 @@ namespace LFDeliveryAPP_WebApi.Controllers
                 }
 
                 var path = Path.Combine(_attachmentPath, file.FileName);
-                using (var stream = new FileStream(path, FileMode.Create))
-                {
-                    await file.CopyToAsync(stream);                    
-                }
+                //using (var stream = new FileStream(path, FileMode.Create))
+                //{
+                //    await file.CopyToAsync(stream);     
+                //}
+                using var image = Image.Load(file.OpenReadStream());
+                image.Mutate(x => x.Resize(_weight, _height));
+                image.Save(path);
 
                 FileInfo finfo = new FileInfo(path);
                 if (finfo.Exists)
