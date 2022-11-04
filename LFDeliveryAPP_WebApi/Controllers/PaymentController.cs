@@ -35,7 +35,6 @@ namespace LFDeliveryAPP_WebApi.Controllers
         {
             _logger = logger;
             _configuration = configuration;
-            _fileLogger.filePath = configuration.GetSection("LogFilePath").Value;
             _dbMWConnectionStr = _configuration.GetConnectionString(_dbMWName);
             _dbSAPConnectionStr = _configuration.GetConnectionString(_dbSAPName);
         }

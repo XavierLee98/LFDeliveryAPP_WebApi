@@ -34,22 +34,11 @@ namespace LFDeliveryAPP_WebApi.Class
         {
             try
             {
-                string destinationPath=null;
-                if (filePath == null)
-                {
-                    destinationPath = Path.Combine(Path.GetTempFileName(), @$"\DeliveryAppLog");
-                }
-                else
-                {
-                    destinationPath = Path.Combine(filePath, @$"\DeliveryAppLog");
-                }
 
-                if (!Directory.Exists(destinationPath))
-                {
-                    Directory.CreateDirectory(destinationPath);
-                }
-
-                string targetFileName = Path.Combine(destinationPath, $"{DateTime.Now:yyyy-MM-dd)}.txt");
+                var currentDirectory = AppDomain.CurrentDomain.BaseDirectory;
+                var accessPath = Path.Combine(currentDirectory, @$"\DeliveryAppLog");
+                if (!Directory.Exists(accessPath)) Directory.CreateDirectory(accessPath);
+                string targetFileName = Path.Combine(accessPath, $"{DateTime.Now:yyyy-MM-dd}.txt");
                 File.AppendAllText(targetFileName, $"{DateTime.Now:HH:mm:ss)} => \n{logMessage}\n");
 
                 return true;

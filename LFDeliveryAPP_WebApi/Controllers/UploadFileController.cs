@@ -42,7 +42,6 @@ namespace LFDeliveryAPP_WebApi.Controllers
             _dbMWConnectionStr = _configuration.GetConnectionString(_dbMWName);
             _dbSAPConnectionStr = _configuration.GetConnectionString(_dbSAPName);
             _attachmentPath = _configuration.GetSection(_attachment).Value;
-            _fileLogger.filePath = configuration.GetSection("LogFilePath").Value;
             _height = Convert.ToInt32(_configuration.GetSection("PictureHeight").Value);
             _weight = Convert.ToInt32(_configuration.GetSection("PictureWidth").Value);
 

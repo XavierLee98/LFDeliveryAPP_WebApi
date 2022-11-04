@@ -38,6 +38,7 @@ namespace LFDeliveryAPP_WebApi.Class
         public List<UserGroup> UserGroups { get; set; }
         public string QueryGroup { get; set; }
         public List<DBCommon> dBCommonList { get; set; }
+        public DispatchDetail dispatchDetail { get; set; }
         public DTODispatch DTODispatch { get; set; }
         public DTOPayment DTOPayment { get; set; }
         public List<IncomingPaymentHeader> IncomingPaymentHeaders { get; set; }

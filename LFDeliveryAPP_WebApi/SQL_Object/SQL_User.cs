@@ -49,13 +49,13 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
         }
 
 
-        public bool CheckTruckAvailable(string truckNum)
+        public bool CheckTruckAvailable(string truckNum,string userName)
         {
             try
             {
                 conn = new SqlConnection(_MWdbConnectionStr);
-                var selectQuery = "SELECT Count(1) FROM SSO WHERE TruckNum = @TruckNum;";
-                var countResult = conn.Query<int>(selectQuery, new { TruckNum = truckNum }).FirstOrDefault();
+                var selectQuery = "SELECT Count(1) FROM SSO WHERE TruckNum = @TruckNum AND UserName != @UserName;";
+                var countResult = conn.Query<int>(selectQuery, new { TruckNum = truckNum, UserName = userName }).FirstOrDefault();
 
                 if(countResult > 0)
                 {

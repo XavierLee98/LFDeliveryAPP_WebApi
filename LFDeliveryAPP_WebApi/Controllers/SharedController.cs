@@ -31,7 +31,6 @@ namespace LFDeliveryAPP_WebApi.Controllers
         {
             _logger = logger;
             _configuration = configuration;
-            _fileLogger.filePath = configuration.GetSection("LogFilePath").Value;
             _dbMWConnectionStr = _configuration.GetConnectionString(_dbMWName);
             _dbSAPConnectionStr = _configuration.GetConnectionString(_dbSAPName);
         }
@@ -69,7 +68,7 @@ namespace LFDeliveryAPP_WebApi.Controllers
             {
                 using (var conn = new SqlConnection(_dbSAPConnectionStr))
                 {
-                    string query = $"SELECT Code [TruckCode], Name [TruckName] FROM {bag.currentDB.WarehouseCompanyDB}..[@TRUCK]";
+                    string query = $"SELECT Code [TruckCode], Name [TruckName] FROM {bag.currentDB.CompanyDB}..[@TRUCK]";
                     var result = conn.Query<Truck>(query).ToList();
 
                     bag.Trucks = result;

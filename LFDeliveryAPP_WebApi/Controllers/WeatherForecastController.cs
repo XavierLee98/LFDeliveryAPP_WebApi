@@ -25,6 +25,7 @@ namespace LFDeliveryAPP_WebApi.Controllers
         }
 
         [HttpGet]
+        [AllowAnonymous]
         public IEnumerable<WeatherForecast> Get()
         {
             var rng = new Random();

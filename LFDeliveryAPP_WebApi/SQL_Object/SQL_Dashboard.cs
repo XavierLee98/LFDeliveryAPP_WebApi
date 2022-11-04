@@ -34,17 +34,16 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
             {
                 using (var conn = new SqlConnection(_MWdbConnectionStr))
                 {
-                    string query = "EXEC DispatchDashboard @StartTime, @EndTime, @CardCode, @Status, @CompanyID, @MarketingCompany, @WarehouseCompany";
-                    var result = conn.Query<DashboardM>(query,
-                        new { 
-                            StartTime = bag.QueryStartTime, 
-                            EndTime = bag.QueryEndTime, 
+                    //string query = "EXEC DispatchDashboard @StartTime, @EndTime, @CardCode, @Status, @CompanyID, @MarketingCompany, @WarehouseCompany";
+                    var result = conn.Query<DashboardM>("DispatchDashboard",
+                        new {
+                            StartDate = bag.QueryStartTime,
+                            EndDate = bag.QueryEndTime, 
                             CardCode = bag.QueryCardCode, 
                             Status = bag.QueryStatus, 
                             CompanyID = bag.currentDB.CompanyID, 
                             MarketingCompany = bag.currentDB.CompanyDB, 
-                            WarehouseCompany = bag.currentDB.WarehouseCompanyDB 
-                        }).ToList();
+                        }, commandType:CommandType.StoredProcedure).ToList();
                     return result;
                 }
             }
@@ -67,7 +66,6 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
                     p.Add("@CardCode", bag.QueryCardCode);
                     p.Add("@CompanyID", bag.currentDB.CompanyID);
                     p.Add("@MarketingCompany", bag.currentDB.CompanyDB);
-                    p.Add("@WarehouseCompany", bag.currentDB.WarehouseCompanyDB);
                     p.Add("@LoadedCount", dbType: DbType.Int32, direction: ParameterDirection.Output);
                     p.Add("@InTransitCount", dbType: DbType.Int32, direction: ParameterDirection.Output);
                     p.Add("@DeliveredCount", dbType: DbType.Int32, direction: ParameterDirection.Output);

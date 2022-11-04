@@ -4,6 +4,7 @@ https://go.microsoft.com/fwlink/?LinkID=208121.
 -->
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
-    <_PublishTargetUrl>C:\Users\lkx\Desktop\LFwater\LFDeliveryAPP_WebApi\LFDeliveryAPP_WebApi\bin\Release\net5.0\publish\</_PublishTargetUrl>
+    <_PublishTargetUrl>E:\LKX\LifeWater\LFDelivery\LFDeliveryAPP_WebApi\bin\Release\net5.0\publish\</_PublishTargetUrl>
+    <History>True|2022-11-01T06:58:35.8440847Z;False|2022-11-01T14:58:06.0610986+08:00;True|2022-11-01T14:33:43.5827270+08:00;True|2022-11-01T14:27:28.5738804+08:00;True|2022-11-01T14:06:24.5027338+08:00;</History>
   </PropertyGroup>
 </Project>

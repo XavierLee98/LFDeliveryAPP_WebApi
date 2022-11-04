@@ -29,7 +29,6 @@ namespace LFDeliveryAPP_WebApi.Controllers
         {
             _logger = logger;
             _configuration = configuration;
-            _fileLogger.filePath = configuration.GetSection("LogFilePath").Value;
             _dbMWConnectionStr = _configuration.GetConnectionString(_dbMWName);
         }
 
@@ -137,7 +136,7 @@ namespace LFDeliveryAPP_WebApi.Controllers
 
                 var sqlUser = new SQL_User(_configuration, _dbMWConnectionStr);
 
-                var checkTruckAvailable = sqlUser.CheckTruckAvailable(bag.CurrentUser.TruckNum);
+                var checkTruckAvailable = sqlUser.CheckTruckAvailable(bag.CurrentUser.TruckNum, bag.CurrentUser.UserName);
 
                 if (!checkTruckAvailable)
                 {

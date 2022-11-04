@@ -33,7 +33,6 @@ namespace LFDeliveryAPP_WebApi.Controllers
         {
             _logger = logger;
             _configuration = configuration;
-            _fileLogger.filePath = configuration.GetSection("LogFilePath").Value;
             _dbMWConnectionStr = _configuration.GetConnectionString(_dbMWName);
             _dbSAPConnectionStr = _configuration.GetConnectionString(_dbSAPName);
         }
@@ -118,10 +117,7 @@ namespace LFDeliveryAPP_WebApi.Controllers
             {
                 var dispatch = new SQL_Dispatch(_configuration, _dbMWConnectionStr, bag.currentDB);
 
-                foreach(var detail in bag.dispatchDetails)
-                {
-                    detail.InvoiceReportURL = dispatch.GetInvoiceReportURL(detail);
-                }
+                bag.dispatchDetail.InvoiceReportURL = dispatch.GetInvoiceReportURL(bag.dispatchDetail);
 
                 return Ok(bag);
             }
@@ -265,6 +261,7 @@ namespace LFDeliveryAPP_WebApi.Controllers
                 return BadRequest($"{excep}");
             }
         }
+
         IActionResult GetINV1(Cio bag)
         {
             try
@@ -424,9 +421,9 @@ namespace LFDeliveryAPP_WebApi.Controllers
             {
                 using (var conn = new SqlConnection(_dbMWConnectionStr))
                 {
-                    string query = "Select * FROM DispatchHeader WHERE CompanyID = @CompanyID";
+                    string query = "Select * FROM DispatchHeader WHERE CompanyID = @CompanyID AND cast(CreatedDate as date) = cast(@SelectedDate as date)";
 
-                    var result = conn.Query<DispatchHeader>(query, new { CompanyID = bag.currentDB.CompanyID }).ToList();
+                    var result = conn.Query<DispatchHeader>(query, new { CompanyID = bag.currentDB.CompanyID, SelectedDate = bag.QueryStartTime }).ToList();
 
                     var dto = new DTODispatch();
 

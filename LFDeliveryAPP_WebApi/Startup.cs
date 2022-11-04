@@ -93,8 +93,6 @@ namespace LFDeliveryAPP_WebApi
             });
 
 
-            //app.UseHttpsRedirection();
-
             app.UseRouting();
             app.UseAuthentication();
             app.UseAuthorization();

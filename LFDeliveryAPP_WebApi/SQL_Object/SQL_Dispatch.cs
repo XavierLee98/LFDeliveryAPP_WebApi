@@ -367,7 +367,6 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
         }
         public int CreateDispatchDoc(DTODispatch dTODelivery)
         {
-
             int count = -1;
             try
             {
@@ -522,13 +521,12 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
                 {
                     List<OINV_Ex> oINVs = new List<OINV_Ex>();
                     #region GetOINVDocEntry From PickList
-                    string headerquery = "SELECT DISTINCT T2.DocEntry " +
-                                         "FROM [" + _currentDB.WarehouseCompanyDB+ "].[dbo].[INV1] T0 " +
-                                         "INNER JOIN [" + _currentDB.WarehouseCompanyDB + "].[dbo].OINV T1 ON T0.DocEntry = T1.DocEntry " +
-                                         "INNER JOIN [" + _currentDB.CompanyDB + "].[dbo].OINV T2 ON T1.U_PortalID = T2.U_PortalID AND T2.U_RENTRY = T1.DocEntry " +
-                                         "INNER JOIN [" + _currentDB.WarehouseCompanyDB + "].[dbo].PKL1 T3 on T0.PickIdNo = T3.AbsEntry " +
-                                         "INNER JOIN [" + _currentDB.WarehouseCompanyDB + "].[dbo].OPKL T4 on T3.AbsEntry = T4.AbsEntry " +
-                                         "Where T4.AbsEntry = @QueryDocEntry AND T4.U_TruckNo = @TruckNum AND T2.U_DatabaseID = @DatabaseID;";
+                    string headerquery = "SELECT DISTINCT T0.DocEntry " +
+                                         "FROM [" + _currentDB.CompanyDB + "].[dbo].[INV1] T0 " +
+                                         "INNER JOIN [" + _currentDB.CompanyDB + "].[dbo].OINV T1 ON T0.DocEntry = T1.DocEntry " +
+                                         "INNER JOIN [" + _currentDB.CompanyDB + "].[dbo].PKL1 T2 on T0.PickIdNo = T2.AbsEntry " +
+                                         "INNER JOIN [" + _currentDB.CompanyDB + "].[dbo].OPKL T3 on T2.AbsEntry = T3.AbsEntry " +
+                                         "Where T3.AbsEntry = @QueryDocEntry AND T3.U_TruckNo = @TruckNum AND T1.U_DatabaseID = @DatabaseID;";
 
                     var OINVDocEntryList = sapconn.Query<string>(headerquery, new { QueryDocEntry = docEntry, TruckNum = truck, DatabaseID = _currentDB.WarehouseCompanyDB }).ToList();
                     if (OINVDocEntryList == null || OINVDocEntryList.Count <= 0)
@@ -540,7 +538,7 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
                     #region GetOINV
                     string oINVquery = "SELECT T0.*, T1.Name [ContactPerson], T1.Tel1 [ContactNo] FROM [" + _currentDB.CompanyDB + "].[dbo].[OINV] T0" +
                                        " LEFT JOIN [" + _currentDB.CompanyDB + "].[dbo].[OCPR] T1 ON T0.CntctCode = T1.CntctCode" +
-                                       " WHERE DocEntry = @DocEntry";
+                                       " WHERE T0.DocEntry = @DocEntry";
                     //OINV List 
                     foreach (var docnoOINV in OINVDocEntryList)
                     {
@@ -564,9 +562,13 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
             try
             {
                 var conn = new SqlConnection(_MWdbConnectionStr);
-                string query = @"SELECT T0.*, T1.ItemCode, T1.Dscription [ItemName] from [" + _currentDB.WarehouseCompanyDB + "]..PKL1 T0 " +
-                                "INNER JOIN [" + _currentDB.WarehouseCompanyDB + "]..RDR1 T1 ON T0.OrderEntry =T1.DocEntry AND T0.OrderLine = T1.LineNum " +
-                                "Where AbsEntry = @PickNo";
+                string query = $"SELECT T0.*, " +
+                               $"CASE WHEN T0.BaseObject = 17 THEN T1.ItemCode WHEN T0.BaseObject = 13 THEN T2.ItemCode END AS [ItemCode], " +
+                               $"CASE WHEN T0.BaseObject = 17 THEN T1.Dscription WHEN T0.BaseObject = 13 THEN T2.Dscription END AS [ItemName] " +
+                               $"FROM [" + _currentDB.CompanyDB + "]..PKL1 T0 " +
+                               $"LEFT JOIN [" + _currentDB.CompanyDB + "]..RDR1 T1 ON T0.OrderEntry = T1.DocEntry AND T0.OrderLine = T1.LineNum " +
+                               $"LEFT JOIN [" + _currentDB.CompanyDB + "]..INV1 T2 ON T0.OrderEntry = T2.DocEntry AND T0.OrderLine = T2.LineNum " +
+                               $"Where AbsEntry = @PickNo";
 
                 var result = conn.Query<PKL1_Ex>(query, new { PickNo = docentry }).ToList();
 
@@ -584,9 +586,13 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
             try
             {
                 var conn = new SqlConnection(_MWdbConnectionStr);
-                string query = @"SELECT T0.*, T1.ItemCode, T1.Dscription [ItemName] from [" + _currentDB.WarehouseCompanyDB + "]..PKL1 T0 " +
-                                "INNER JOIN [" + _currentDB.WarehouseCompanyDB + "]..RDR1 T1 ON T0.OrderEntry =T1.DocEntry AND T0.OrderLine = T1.LineNum " +
-                                "Where AbsEntry = @PickNo";
+                string query = $"SELECT T0.*, " +
+                               $"CASE WHEN T0.BaseObject = 17 THEN T1.ItemCode WHEN T0.BaseObject = 13 THEN T2.ItemCode END AS [ItemCode], " +
+                               $"CASE WHEN T0.BaseObject = 17 THEN T1.Dscription WHEN T0.BaseObject = 13 THEN T2.Dscription END AS [ItemName] " +
+                               $"FROM [" + _currentDB.CompanyDB + "]..PKL1 T0 " +
+                               $"LEFT JOIN [" + _currentDB.CompanyDB + "]..RDR1 T1 ON T0.OrderEntry = T1.DocEntry AND T0.OrderLine = T1.LineNum " +
+                               $"LEFT JOIN [" + _currentDB.CompanyDB + "]..INV1 T2 ON T0.OrderEntry = T2.DocEntry AND T0.OrderLine = T2.LineNum " +
+                               $"Where AbsEntry = @PickNo";
                 var PKL1s = new List<PKL1_Ex>();
                 foreach(var docentry in docentries)
                 {
@@ -625,28 +631,3 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
         }
     }
 }
-//string detailquery = @"Select * from
-//                 (
-//                 --Sale Order
-//                 SELECT T3.AbsEntry [PickNo] , 'SaleOrder' [DocType], T1.DocNum [SODocNum], T5.DocEntry [InvoiceDocEntry], T5.DocNum [InvoiceDocNum], T5.CardCode, T5.CardName, T4.ItemCode, T4.Dscription [ItemName], T4.Quantity FROM 
-//                 ORDR T1 with (nolock)
-//                 INNER JOIN
-//                 RDR1 T2 with (nolock) on T1.DocEntry = T2.DocEntry
-//                 LEFT JOIN
-//                 PKL1 T3 with (nolock) on T3.OrderEntry = T1.DocEntry AND T3.OrderLine = T2.LineNum AND T3.BaseObject = 17
-//                 LEFT JOIN
-//                 INV1 T4 with (nolock) on T4.BaseEntry = T2.DocEntry AND T4.BaseLine = T2.LineNum AND T4.ItemCode = T2.ItemCode
-//                 LEFT JOIN
-//                 OINV T5 with (nolock) on T4.DocEntry = T5.DocEntry
-//                 WHERE T3.OrderEntry IS NOT NULL
-//                 AND T4.DocEntry IS NOT NULL
-
-//                 Union
-
-//                 --Reserve Invoice
-//                 SELECT T2.AbsEntry [PickNo], 'ReserveInvoice' [DocType], NULL [SODoCNum], T0.DocEntry [InvoiceDocEntry], T0.DocNum [InvoiceDocNum], T0.CardCode, T0.CardName, T1.ItemCode, T1.Dscription, T1.Quantity  FROM OINV T0 
-//                 INNER JOIN INV1 T1 with (nolock) ON T0.DocEntry = T1.DocEntry
-//                 Left JOIN PKL1 T2 with (nolock) ON T1.DocEntry = T2.OrderEntry AND T1.LineNum = T2.OrderLine AND T2.BaseObject = 13
-//                 WHERE T2.OrderEntry IS NOT NULL
-//                 ) AS TT1
-//                 WHERE TT1.PickNo = @QueryDocEntry";

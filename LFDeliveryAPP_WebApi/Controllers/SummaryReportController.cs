@@ -27,7 +27,6 @@ namespace LFDeliveryAPP_WebApi.Controllers
         {
             _logger = logger;
             _configuration = configuration;
-            _fileLogger.filePath = configuration.GetSection("LogFilePath").Value;
             _dbMWConnectionStr = _configuration.GetConnectionString(_dbMWName);
             _dbSAPConnectionStr = _configuration.GetConnectionString(_dbSAPName);
         }
@@ -87,7 +86,7 @@ namespace LFDeliveryAPP_WebApi.Controllers
 
                 if (string.IsNullOrEmpty(pathresult.Path))
                 {
-                    return Accepted("Please onhold on a while. You may click generate to try again.");
+                    return BadRequest("Please onhold on a while. You may need click generate to try again.");
                 }
 
                 return Ok(pathresult);
