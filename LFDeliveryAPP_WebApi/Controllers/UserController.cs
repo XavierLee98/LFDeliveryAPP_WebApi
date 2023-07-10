@@ -136,12 +136,12 @@ namespace LFDeliveryAPP_WebApi.Controllers
 
                 var sqlUser = new SQL_User(_configuration, _dbMWConnectionStr);
 
-                var checkTruckAvailable = sqlUser.CheckTruckAvailable(bag.CurrentUser.TruckNum, bag.CurrentUser.UserName);
+                //var checkTruckAvailable = sqlUser.CheckTruckAvailable(bag.CurrentUser.TruckNum, bag.CurrentUser.UserName);
 
-                if (!checkTruckAvailable)
-                {
-                    return  BadRequest(sqlUser.LastErrorMessage);
-                }
+                //if (!checkTruckAvailable)
+                //{
+                //    return  BadRequest(sqlUser.LastErrorMessage);
+                //}
 
                 string updateQuery = "Update SSO SET TruckNum = @TruckNum Where UserName = @UserName And UserGroupID = 0";
 
