@@ -105,6 +105,7 @@ namespace LFDeliveryAPP_WebApi.Controllers
                 return BadRequest(excep.ToString());
             }
         }
+
         IActionResult UpdateUserDetails(Cio bag)
         {
             try
@@ -128,6 +129,7 @@ namespace LFDeliveryAPP_WebApi.Controllers
                 return BadRequest(excep.ToString());
             }
         }
+
         IActionResult UpdateDriverTruck(Cio bag)
         {
             try
@@ -180,7 +182,7 @@ namespace LFDeliveryAPP_WebApi.Controllers
                 string selectQuery = @"SELECT T1.[GroupDescription] [GroupDesc], T2.[RoleDescription] [RoleDesc], T0.* FROM SSO T0
                                       INNER JOIN[UserGroup] T1 ON T0.UserGroupID = T1.GroupId
                                       INNER JOIN[UserRole] T2 ON T0.UserRoleID = T2.RoleId
-                                      WHERE UserGroupID = @UserGroupID";
+                                      WHERE T0.UserGroupID = @UserGroupID AND Username != 'Admin'";
 
                 var user = conn.Query<SSO>(selectQuery, new { UserGroupID = bag.QueryGroup}).ToList();
                 bag.userList = user;

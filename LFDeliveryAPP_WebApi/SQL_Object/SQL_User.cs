@@ -54,7 +54,7 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
             try
             {
                 conn = new SqlConnection(_MWdbConnectionStr);
-                var selectQuery = "SELECT Count(1) FROM SSO WHERE TruckNum = @TruckNum AND UserName != @UserName;";
+                var selectQuery = "SELECT Count(1) FROM SSO WHERE TruckNum = @TruckNum AND UserName != @UserName AND IsActive = 1;";
                 var countResult = conn.Query<int>(selectQuery, new { TruckNum = truckNum, UserName = userName }).FirstOrDefault();
 
                 if(countResult > 0)
@@ -88,6 +88,7 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
                                         ,[UserGroupID]
                                         ,[UserRoleID]
                                         ,[IsEnabledExchange]
+                                        ,[IsActive]
                                         )
                                         VALUES
                                         (
@@ -99,16 +100,17 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
                                             @currentUser,
                                             @UserGroupID,
                                             @UserRoleID,
-                                            @IsEnabledExchange
+                                            @IsEnabledExchange,
+                                            1
                                         )";
 
                 var result = conn.Execute(insertQuery,
                                      new
                                      {
                                          CompanyId = QueryUser.CompanyId,
-                                         UserName = QueryUser.UserName,
+                                         UserName = QueryUser.UserName.ToUpper(),
                                          Password = decrytedPw,
-                                         DisplayName = QueryUser.DisplayName,
+                                         DisplayName = QueryUser.DisplayName.ToUpper(),
                                          UserGroupID = QueryUser.UserGroupID,
                                          UserRoleID = QueryUser.UserRoleID,
                                          IsEnabledExchange = QueryUser.IsEnabledExchange,
@@ -131,7 +133,7 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
                 string decrytedPw = new MD5EnDecrytor().Decrypt(QueryUser.Password, true, secKey);
 
                 string updateQuery = @" UPDATE [dbo].[SSO] SET Password = @Pwd, UserGroupID = @GroupID, UserRoleID = @RoleID, IsEnabledExchange = @IsEnabledExchange,
-                                        LastModifiedDate = GETDATE(), LastModifiedUser = @currentUser, CompanyID = @CompanyID
+                                        LastModifiedDate = GETDATE(), LastModifiedUser = @currentUser, CompanyID = @CompanyID, DisplayName = @DisplayName, TruckNum = @TruckNum, IsActive = @IsActive
                                         WHERE UserName = @UserName";
 
                 var result = conn.Execute(updateQuery, 
@@ -142,7 +144,10 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
                                            IsEnabledExchange = QueryUser.IsEnabledExchange, 
                                            currentUser = currentUser, 
                                            UserName = QueryUser.UserName,
-                                           CompanyID = QueryUser.CompanyId
+                                           CompanyID = QueryUser.CompanyId,
+                                           DisplayName = QueryUser.DisplayName,
+                                           IsActive = QueryUser.IsActive,
+                                           TruckNum = QueryUser.TruckNum,
                                          });
 
                 return result;

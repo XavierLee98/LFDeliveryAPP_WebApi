@@ -20,7 +20,7 @@ namespace LFDeliveryAPP_WebApi.Class.User
         public int UserRoleID { get; set; }
         public string RoleDesc { get; set; }
         public bool IsEnabledExchange { get; set; }
-        public string  UserGroupDesc { get; set; }
+        public bool IsActive { get; set; }
         public string assigned_token { get; set; }
         public DateTime Last_Login { get; set; }
         public List<GroupPermission> Menus{ get; set; }

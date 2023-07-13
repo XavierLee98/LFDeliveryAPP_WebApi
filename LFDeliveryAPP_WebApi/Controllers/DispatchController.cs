@@ -313,7 +313,7 @@ namespace LFDeliveryAPP_WebApi.Controllers
                     return NotFound(_lastErrorMessage);
                 }
 
-                var result = dispatch.InsertDispatchLineDraft(bag.OINVs, bag.QueryDriver, bag.QueryDriverName);
+                var result = dispatch.InsertDispatchLineDraft(bag.OINVs, bag.QueryDriver, bag.QueryDriverName,bag.QueryTruck);
                 if (result < 0)
                 {
                     bag.LastErrorMessage = "Fail To Insert into Draft.";
