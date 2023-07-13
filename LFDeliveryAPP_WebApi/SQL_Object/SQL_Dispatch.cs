@@ -458,7 +458,7 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
                 return -1;
             }
         }
-        public int InsertDispatchLineDraft(List<OINV_Ex> OINVList, string driverCode, string driverName)
+        public int InsertDispatchLineDraft(List<OINV_Ex> OINVList, string driverCode, string driverName, string truckNo)
         {
             try
             {
@@ -468,6 +468,7 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
                                        [CompanyID]
                                       ,[DriverCode]
                                       ,[DriverName]
+                                      ,[TruckNum]
                                       ,[PickNo]
                                       ,[InvoiceDocNum]
                                       ,[InvoiceDocEntry]
@@ -480,6 +481,7 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
                                         @CompanyID,
                                         @Driver, 
                                         @DriverName,
+                                        @TruckNum
                                         @PickNo,
                                         @InvoiceDocNum,
                                         @InvoiceDocEntry,
@@ -497,6 +499,7 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
                         CompanyID =_currentDB.CompanyID,
                         Driver = driverCode,
                         DriverName = driverName,
+                        TruckNum = truckNo,
                         PickNo = line.PickIdNo,
                         InvoiceDocNum = line.DocNum,
                         InvoiceDocEntry = line.DocEntry,

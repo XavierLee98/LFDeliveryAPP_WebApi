@@ -74,8 +74,14 @@ namespace LFDeliveryAPP_WebApi.Controllers
                 if (!isVerify)
                 {
                     Log($"User login fail \n{user.lastErrMsg}", cio);
-                    return BadRequest($"User login fail \n{user.lastErrMsg}");
+                    return Unauthorized($"User login fail \n{user.lastErrMsg}");
                 }
+
+                if (!CheckActive(cio.username))
+                {
+                    return Unauthorized($"Account {cio.username} is inactive.");
+                }
+
                 if(getcurrentDB(user.user.CompanyId) == null)
                 {
                     return BadRequest($"Fail to get DBCommon.");
@@ -85,7 +91,7 @@ namespace LFDeliveryAPP_WebApi.Controllers
                 cio.CurrentUser.Menus = getMenuPermission(cio.CurrentUser);
                 cio.CurrentUser.assigned_token = user.user.assigned_token;
                 cio.CurrentUser.Password = user.GetEncrytedPw(secKey);
-                cio.CurrentUser.UserGroupDesc = GetGroupDesc(cio.CurrentUser.UserGroupID);
+                cio.CurrentUser.GroupDesc = GetGroupDesc(cio.CurrentUser.UserGroupID);
 
                 return Ok(cio);
             }
@@ -127,6 +133,21 @@ namespace LFDeliveryAPP_WebApi.Controllers
             {
                 Log($"{excep}", null);
                 return null;
+            }
+        }
+
+        public bool CheckActive(string username)
+        {
+            try
+            {
+                var conn = new SqlConnection(_dbMWConnectionStr);
+                string query = "SELECT IsActive FROM SSO Where UserName = @UserName";
+                return conn.Query<bool>(query, new { UserName = username }).FirstOrDefault();
+            }
+            catch (Exception excep)
+            {
+                Log($"{excep}", null);
+                return false;
             }
         }
 
