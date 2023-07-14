@@ -9,6 +9,8 @@ namespace LFDeliveryAPP_WebApi.Model.SummaryReport
     {
         public int Id { get; set; }
         public string CompanyID { get; set; }
+        public string TruckNum { get; set; }
+        public string DriverCode { get; set; }
         public Guid Guid { get; set; }
         public string DocType { get; set; }
         public DateTime StartDate { get; set; }

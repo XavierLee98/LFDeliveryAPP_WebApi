@@ -1,6 +1,7 @@
 ﻿using Dapper;
 using DbClass;
 using LFDeliveryAPP_WebApi.Class;
+using LFDeliveryAPP_WebApi.Class.User;
 using LFDeliveryAPP_WebApi.Model.Other;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -51,6 +52,10 @@ namespace LFDeliveryAPP_WebApi.Controllers
                         {
                             return GetTruckList(bag);
                         }
+                    case "LoadDriver":
+                        {
+                            return GetDriverList(bag);
+                        }
                 }
                 _lastErrorMessage = "Request is Empty.";
                 return null;
@@ -59,6 +64,26 @@ namespace LFDeliveryAPP_WebApi.Controllers
             {
                 Log(excep.ToString(), bag);
                 return BadRequest(excep.ToString());
+            }
+        }
+
+        public IActionResult GetDriverList(Cio bag)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_dbMWConnectionStr))
+                {
+                    string query = $"SELECT UserName, DisplayName FROM SSO WHERE UserGroupID = 0 AND UserName != 'Admin' AND IsActive = 1";
+                    var result = conn.Query<SSO>(query).ToList();
+
+                    return Ok(result);
+                }
+            }
+            catch (Exception excep)
+            {
+                _lastErrorMessage = excep.ToString();
+                Log(_lastErrorMessage, bag);
+                return BadRequest(_lastErrorMessage);
             }
         }
 
