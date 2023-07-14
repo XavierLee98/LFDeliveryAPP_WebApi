@@ -35,6 +35,8 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
 
                     var result = conn.Query<SummaryReportModel>(query, new { CompanyId = report.CompanyID, Guid = report.Guid}).FirstOrDefault();
 
+                    if(result.IsPost)
+                    Console.WriteLine($"Path: {(string.IsNullOrEmpty(result.Path)?"null":result.Path)}");
                     return result;
                 }
             }
@@ -55,6 +57,8 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
                                     ([CompanyID]
                                     ,[Guid]
                                     ,[DocType]
+                                    ,[TruckNum]
+                                    ,[DriverCode]
                                     ,[StartDate]
                                     ,[EndDate]
                                     ,[Status]
@@ -67,6 +71,8 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
                                      @CompanyID,
                                      @Guid,
                                      @DocType,
+                                     @TruckNum,
+                                     @DriverCode,
                                      @StartDate,
                                      @EndDate,
                                      @Status,

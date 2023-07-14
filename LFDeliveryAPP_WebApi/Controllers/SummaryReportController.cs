@@ -84,11 +84,6 @@ namespace LFDeliveryAPP_WebApi.Controllers
                 var summaryrpt = new SQL_SummaryReport(_configuration, _dbMWConnectionStr);
                 var pathresult = summaryrpt.GetReportPath(bag.summaryReport);
 
-                if (string.IsNullOrEmpty(pathresult.Path))
-                {
-                    return BadRequest("Please onhold on a while. You may need click generate to try again.");
-                }
-
                 return Ok(pathresult);
 
             }
