@@ -481,7 +481,7 @@ namespace LFDeliveryAPP_WebApi.SQL_Object
                                         @CompanyID,
                                         @Driver, 
                                         @DriverName,
-                                        @TruckNum
+                                        @TruckNum,
                                         @PickNo,
                                         @InvoiceDocNum,
                                         @InvoiceDocEntry,
